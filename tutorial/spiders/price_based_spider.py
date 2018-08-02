@@ -43,47 +43,16 @@ class PriceSpider(scrapy.Spider):
         plain = " ".join(plain.split())
         self.extract_info(plain)
 
-    def is_like_conf(self, post: str):
-        key_words = ['disk', 'ssd', 'ram', 'gb', 'mb', 'ip', 'cpu']
-        post = post.lower()
-
-        count = 0
-        for key_word in key_words:
-            if key_word in post:
-                count += 1
-
-        return count > 3
-
-    def is_conf_before_price(self, post: str):
-        signs = ['$', '€', '£']
-        sign = None
-        for s in signs:
-            if s in post:
-                sign = s
-        segments = post.split(sign)
-        return sign, self.is_like_conf(segments[0])
-
-    def text_to_table(self, conf: str, cbp: bool):
-        conf_length = 120
-        tagged = nltk.pos_tag(conf.split())
-        grammar = r"NP: {(<NNP>+|<NN>)<:><CD>}"
-        cp = nltk.RegexpParser(grammar)
-        result = cp.parse(tagged)
-        print(result)
-        return None
-
     def extract_info(self, post: str):
         rates = {'$': 1, '€': 1.17, '£': 1.31}
-        sign, cbp = self.is_conf_before_price(post)
-        print(post)
-        segments = post.split(sign)
-        if cbp:
-            segments = segments[:-1]
-        else:
-            segments = segments[1:]
-
-        tables = []
-        for text in segments:
-            tables.append(self.text_to_table(text, cbp))
-        print(tables)
-
+        sentences = nltk.sent_tokenize(post)
+        sentences = [nltk.word_tokenize(sent) for sent in sentences]
+        for sent in sentences:
+            tagged = nltk.pos_tag(sent)
+            grammar = r'''
+            Conf:   {(<NNP>+|<NN>)<:><CD>}
+            Price: {<IN><RB>?<CD><\$|\€|\£>}
+            '''
+            cp = nltk.RegexpParser(grammar)
+            result = cp.parse(tagged)
+            print(result)
