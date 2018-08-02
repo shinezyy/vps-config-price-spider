@@ -19,9 +19,13 @@ html_names = os.listdir(site_dir)
 n = 0
 for html_name in html_names:
     n += 1
-    with open (pjoin(site_dir, html_name)) as f:
+    if n != n:
+        continue
+    file_path = pjoin(site_dir, html_name)
+    with open (file_path) as f:
         soup = BeautifulSoup(f.read(), 'html.parser')
     spider = PriceSpider()
-    spider.webhostingtalk(soup)
+    print(spider.webhostingtalk(soup, file_path.split('vps_scrapy_html/')[-1]))
+    print(file_path)
     print(f'File {n}', '='*80)
 
