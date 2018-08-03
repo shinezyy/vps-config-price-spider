@@ -1,0 +1,7 @@
+/forum.html
+/tutorial/__pycache__/
+/tutorial/spiders/__init__.py
+/tutorial/spiders/__pycache__/
+/x
+/scylla.db
+*.swp
