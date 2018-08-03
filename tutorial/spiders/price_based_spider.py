@@ -5,6 +5,7 @@ from os.path import join as pjoin
 import re
 import nltk
 import nltk.tag, nltk.data
+from nltk.tokenize import RegexpTokenizer
 import urllib.request
 from . import util as u
 from random import randint
@@ -102,11 +103,13 @@ class PriceSpider(scrapy.Spider):
             print(sst)
             found = False
             if sst.label() == 'Conf':
+                print("tranv", sst)
                 for prop in u.prop_dict:
                     found, k, v = u.get_property(prop, u.prop_dict[prop], sst)
                     # print(found, k, v)
                     try_add(found, k, v)
             elif sst.label() == 'Price':
+                print("tranv", sst)
                 found, k, v = u.get_price(sst)
                 try_add(found, k, v)
 
@@ -120,10 +123,16 @@ class PriceSpider(scrapy.Spider):
 
     def extract_info(self, post: str):
         rates = {'$': 1, '€': 1.17, '£': 1.31}
-        sentences = nltk.sent_tokenize(post)
-        sentences = [nltk.tokenize.regexp_tokenize(sent,
-            pattern='EUR|\d+\.\d+|\d+|\w+|\$|\S+')
+
+        sent_tokenizer = RegexpTokenizer(r'\||,|\.', gaps=True)
+        sentences = sent_tokenizer.tokenize(post.lower())
+
+        word_tokenizer = RegexpTokenizer(r'EUR|\d+\.\d+|\d+|\w+|\$|\S+',
+                gaps=False)
+
+        sentences = [word_tokenizer.tokenize(sent)
             for sent in sentences]
+
         non_terms = ['Conf', 'Price']
 
         def has_item(st):
@@ -140,29 +149,73 @@ class PriceSpider(scrapy.Spider):
 
         conf_list = []
         default_tagger = nltk.data.load(nltk.tag._POS_TAGGER)
-        model = {'EUR': '$'}
+        model = {
+                'eur': '$',
+                '€': '$',
+                '£': '$',
+                'mb': 'Unit',
+                'gb': 'Unit',
+                'tb': 'Unit',
+                'cores': 'Unit',
+                'core': 'Unit',
+                'hdd': 'HW',
+                'ssd': 'HW',
+                'storage': 'HW',
+                'disk': 'HW',
+                'diskspace': 'HW',
+                'space': 'HW',
+                'ram': 'HW',
+                'memory': 'HW',
+                'cpu': 'HW',
+                'processor': 'HW',
+                'bandwidth': 'HW',
+                'transfer': 'HW',
+                'premium': 'HWM',
+                'ddr4': 'HWM',
+                '|': 'Del',
+                'month': 'Time',
+                '/month': 'Time',
+                'mo': 'Time',
+                '/mo': 'Time',
+                '/m': 'Time',
+                'mo)': 'Time',
+                '/mo)': 'Time',
+                '/m)': 'Time',
+                'year': 'Time',
+                'first': 'First',
+                '(first': 'First',
+                'price': 'Pri',
+                '1': 'CD',
+                }
         tagger = nltk.tag.UnigramTagger(model=model, backoff=default_tagger)
         for sent in sentences:
             tagged = tagger.tag(sent)
             grammar = r'''
             Money:
-            {<\$|\€|\£><CD>}
-            {<CD><\$|\€|\£>}
+            {<\$><CD>}
+            {<CD><\$>}
 
-            Price:  {<Money><JJ>}
-            Price:  {<NN|NNP><\:><Money><NN>}
+            Conf: {<CD><Unit><HW><HWM>}
+            Conf: {<CD><Unit><HWM><HW>}
+            Conf: {<CD><Unit><HW>}
+            Conf: {<HW><CD><Unit>}
+            Conf: {<HW><:><CD><Unit>}
+            Conf: {<NNP>+<\(>.*<\)>}
+            Conf: {<NNP>+<\(><CD><Unit><\)>}
+            Conf: {<NNP>+<\(><CD><NNP><NNP><CD><\)>}
+            Conf: {<NNP>+<\(><CD><Unit><\)>}
+            Conf: {<NNP>+<\(><CD><Unit><\)>}
+
+            Price:  {<PRP\$><Pri><:>?<Money>}
+            Price:  {<Money><Time>}
+            Price:  {<Money><First><Time>}
+            Price:  {<Money><IN><Time>}
+            Price:  {<Time><Money>}
             Price:  {<Money><IN>?<NN>}
             Price:  {<IN><RB>?<Money>}
             Price:  {<Money><NNP><NN>?}
 
-            Conf: {(<NNP>+|<NN>)<:><CD>}
-            Conf: {<NNP>+<\(>.*<\)>}
-            Conf: {<NNP>+<\(><CD><NNP><\)>}
-            Conf: {<NNP>+<\(><CD><NNP><NNP><CD><\)>}
-            Conf: {<NNP>+<\(><CD><NN><\)>}
-            Conf: {<NNP>+<\(><CD><NNS><\)>}
-            Conf: {<CD><NNP>+}
-            Conf: {<CD><NN|NNS>}
+            TPrice: {}
             '''
 
             cp = nltk.RegexpParser(grammar)

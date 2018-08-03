@@ -31,7 +31,7 @@ old_empty = [3, 6, 8, 10, 11, 12, 13, 17, 19, 20,
         21, 24, 26, 27, 29, 30, 32, 34, 37, 39]
 for html_name in html_names:
     n += 1
-    if n not in old_empty:
+    if n != 4:
         continue
     file_path = pjoin(site_dir, html_name)
     with open (file_path) as f:
@@ -40,8 +40,9 @@ for html_name in html_names:
     table = spider.webhostingtalk(soup, file_path.split('vps_scrapy_html/')[-1])
     if len(table) == 0:
         empty.append(n)
+    else:
+        print(table)
     print(file_path)
     print(f'File {n}', '='*80)
-    break
 print(empty)
 
