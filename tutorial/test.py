@@ -27,11 +27,11 @@ soup = None
 html_names = os.listdir(site_dir)
 n = 0
 empty = []
-old_empty = [3, 6, 8, 10, 11, 12, 13, 17, 19, 20,
-        21, 24, 26, 27, 29, 30, 32, 34, 37, 39]
+old_empty = [8, 10, 11, 13, 15, 17, 18, 19,
+        24, 25, 26, 27, 28, 29, 30, 32, 33, 34, 37, 39]
 for html_name in html_names:
     n += 1
-    if n != 4:
+    if n not in old_empty:
         continue
     file_path = pjoin(site_dir, html_name)
     with open (file_path) as f:
@@ -45,4 +45,5 @@ for html_name in html_names:
     print(file_path)
     print(f'File {n}', '='*80)
 print(empty)
+print(len(empty))
 

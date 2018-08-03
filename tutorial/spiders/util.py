@@ -3,7 +3,7 @@ import nltk
 
 prop_dict = {
         'RAM': ['memory', 'ram'],
-        'Disk': ['disk', 'ssd', 'storage', 'hdd'],
+        'Disk': ['disk', 'ssd', 'storage', 'hdd', 'raid10'],
         'Traffic': ['traffic', 'bandwidth', 'bw', 'transfer'],
         }
 
@@ -20,6 +20,7 @@ def get_property(prop:str, key_words: [str], st: nltk.tree.Tree):
         return False, None, None
 
     found_count = False
+    count = ''
     for leaf in st.leaves():
         if leaf[1] == 'CD':
             count = leaf[0]
@@ -27,13 +28,16 @@ def get_property(prop:str, key_words: [str], st: nltk.tree.Tree):
         elif leaf[1] == 'NNP' and found_count:
             count += leaf[0]
             break
+    if not len(count):
+        print('Warning: count not assigned')
+
     print('##', prop, count)
     return True, prop, count
 
 
 def get_price(st: nltk.tree.Tree):
     s = str(st.flatten()).lower()
-    key_words = ['/m', 'mo',  'month', 'year']
+    key_words = ['/m', 'mo',  'month', 'year', 'price']
     key_word = None
     found_key_word = False
     for kw in key_words:
