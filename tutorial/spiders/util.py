@@ -27,7 +27,7 @@ def get_property(prop:str, key_words: [str], st: nltk.tree.Tree):
         elif leaf[1] == 'NNP' and found_count:
             count += leaf[0]
             break
-    # print(prop, count)
+    print(prop, count)
     return True, prop, count
 
 
@@ -61,5 +61,5 @@ def get_price(st: nltk.tree.Tree):
             count += '$'
             c += 1
 
-    # print('Price', count)
+    print('Price', count)
     return True, 'Price', count

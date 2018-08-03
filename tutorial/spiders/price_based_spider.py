@@ -4,8 +4,11 @@ from bs4 import BeautifulSoup
 from os.path import join as pjoin
 import re
 import nltk
+import nltk.tag, nltk.data
 import urllib.request
 from . import util as u
+from random import randint
+from time import sleep
 
 
 class PriceSpider(scrapy.Spider):
@@ -29,6 +32,8 @@ class PriceSpider(scrapy.Spider):
         forum = 'http://www.webhostingtalk.com/forumdisplay.php?f=104'
         req = gen_req(forum)
         r = urllib.request.urlopen(req).read()
+        with open("./forum.html", 'w') as f:
+            print(r, file=f)
         soup = BeautifulSoup(r, "html.parser")
         prefix = 'http://www.webhostingtalk.com/'
         titles = soup.findAll('a', {'class': 'title'})
@@ -36,10 +41,13 @@ class PriceSpider(scrapy.Spider):
         for title in titles:
             print(prefix+title['href'])
             urls.append(prefix+title['href'])
-        urls = urls[7: 12]  # drop ads
+        urls = urls[4:]  # drop ads
+        print(urls)
 
         for url in urls:
-            yield scrapy.Request(url=url, callback=self.parse)
+            yield scrapy.Request(url=url, callback=self.parse,
+                    # meta={'proxy': 'http://127.0.0.1:8081'},
+                    )
 
     def parse(self, response):
         site, thread = response.url.split("/")[-2:]
@@ -51,6 +59,7 @@ class PriceSpider(scrapy.Spider):
 
         soup = BeautifulSoup(response.body,
                 'html.parser')
+        print(response.url)
         with open(html_file, 'w') as f:
             print(soup.prettify(), file=f)
         return
@@ -90,7 +99,7 @@ class PriceSpider(scrapy.Spider):
         for sst in st:
             if not isinstance(sst, nltk.tree.Tree):
                 continue
-            # print(sst)
+            print(sst)
             found = False
             if sst.label() == 'Conf':
                 for prop in u.prop_dict:
@@ -113,7 +122,7 @@ class PriceSpider(scrapy.Spider):
         rates = {'$': 1, '€': 1.17, '£': 1.31}
         sentences = nltk.sent_tokenize(post)
         sentences = [nltk.tokenize.regexp_tokenize(sent,
-            pattern='\d+\.\d+|\d+|\w+|\$|\S+')
+            pattern='EUR|\d+\.\d+|\d+|\w+|\$|\S+')
             for sent in sentences]
         non_terms = ['Conf', 'Price']
 
@@ -130,8 +139,11 @@ class PriceSpider(scrapy.Spider):
             return has_conf and has_price
 
         conf_list = []
+        default_tagger = nltk.data.load(nltk.tag._POS_TAGGER)
+        model = {'EUR': '$'}
+        tagger = nltk.tag.UnigramTagger(model=model, backoff=default_tagger)
         for sent in sentences:
-            tagged = nltk.pos_tag(sent)
+            tagged = tagger.tag(sent)
             grammar = r'''
             Money:
             {<\$|\€|\£><CD>}
@@ -156,8 +168,9 @@ class PriceSpider(scrapy.Spider):
             cp = nltk.RegexpParser(grammar)
             result = cp.parse(tagged)
             for st in result.subtrees():
+                print(st)
                 if has_item(st):
-                    # print(st)
+                    print(st)
                     tables = self.to_table(st)
                     conf_list += tables
         return conf_list
