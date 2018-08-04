@@ -5,5 +5,5 @@
 x
 /scylla.db
 *.swp
-/tutorial/old_files.txt
 /tutorial/info.txt
+old_files.txt

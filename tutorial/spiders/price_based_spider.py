@@ -57,8 +57,13 @@ class PriceSpider(scrapy.Spider):
             print(prefix+title['href'])
             urls.append(prefix+title['href'])
         urls = urls[4:]  # drop ads
+        filtered_urls = []
+        for url in urls:
+            site, thread = url.split("/")[-2:]
+            if thread not in u.get_old():
+                filtered_urls.append(url)
+        urls = filtered_urls
         print(urls)
-
         for url in urls:
             yield scrapy.Request(url=url, callback=self.parse,
                     # meta={'proxy': 'http://127.0.0.1:8081'},
@@ -78,7 +83,6 @@ class PriceSpider(scrapy.Spider):
         with open(html_file, 'w') as f:
             print(soup.prettify(), file=f)
         return
-
         self.dispatch(site, soup, response.url)
 
     def dispatch(self, site: str, soup: BeautifulSoup, link):

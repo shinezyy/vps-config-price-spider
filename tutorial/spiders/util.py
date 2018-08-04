@@ -1,5 +1,6 @@
 import nltk
 from . import debug
+import os
 
 
 prop_dict = {
@@ -70,3 +71,11 @@ def get_price(st: nltk.tree.Tree):
 
     d.log(d.debug_tree, '## Price', count)
     return True, 'Price', count
+
+
+def get_old():
+    old_files = []
+    if os.path.isfile('./old_files.txt'):
+        with open('./old_files.txt') as f:
+            old_files = f.read().split()
+    return old_files

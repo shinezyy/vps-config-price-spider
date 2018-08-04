@@ -1,4 +1,5 @@
 from spiders.price_based_spider import PriceSpider
+from spiders.util import get_old
 from os.path import join as pjoin
 from bs4 import BeautifulSoup
 import os
@@ -28,10 +29,7 @@ soup = None
 html_names = os.listdir(site_dir)
 n = 0
 empty = []
-old_files = []
-if os.path.isfile('./old_files.txt'):
-    with open('./old_files.txt') as f:
-        old_files = f.read().split()
+old_files = get_old()
 print(old_files)
 pp = pprint.PrettyPrinter(indent=4)
 for html_name in html_names:
