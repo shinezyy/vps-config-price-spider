@@ -65,7 +65,7 @@ def get_price(st: nltk.tree.Tree):
                 count += s
             c += 1
         elif leaf[1] == '$':
-            count += '$'
+            count += leaf[0]
             c += 1
 
     d.log(d.debug_tree, '## Price', count)

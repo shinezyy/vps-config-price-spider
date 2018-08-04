@@ -97,6 +97,41 @@ class PriceSpider(scrapy.Spider):
                 'Price': 0,
                 }
 
+    def to_tuples(self, st: nltk.tree.Tree):
+        self.log(self.d.debug_tuples, '== Enter to tuples')
+        tuples = []
+        def try_add(found, k, v):
+            if found:
+                tuples.append((k, v))
+                self.state_table[k] = 1
+
+        for sst in st:
+            self.log(self.d.debug_tuples, "proc: ", sst)
+            if not isinstance(sst, nltk.tree.Tree):
+                self.log(self.d.debug_tuples, "skipped!")
+                continue
+            found = False
+            if sst.label() == 'Conf':
+                self.log(self.d.debug_tuples, "trav", sst)
+                for prop in u.prop_dict:
+                    found_t, k, v = u.get_property(prop, u.prop_dict[prop], sst)
+                    try_add(found_t, k, v)
+                    found |= found_t
+            elif sst.label() == 'Price':
+                self.log(self.d.debug_tuples, 'trav', sst)
+                found_t, k, v = u.get_price(sst)
+                try_add(found_t, k, v)
+                found |= found_t
+
+            if sum(self.state_table.values()) == 4:
+                self.log(self.d.debug_tuples, "## spliter generated:")
+                self.state_table = self.clean_state_table()
+                tuples.append('-'*50)
+            elif found:
+                self.log(self.d.debug_tuples, self.state_table)
+
+        return tuples
+
 
     def to_table(self, st: nltk.tree.Tree):
         self.log(self.d.debug_tree, '== Enter to table')
@@ -265,6 +300,6 @@ class PriceSpider(scrapy.Spider):
 
             cp = nltk.RegexpParser(grammar)
             result = cp.parse(tagged)
-            tables = self.to_table(result)
+            tables = self.to_tuples(result)
             conf_list += tables
         return conf_list
