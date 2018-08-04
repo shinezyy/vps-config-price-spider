@@ -42,6 +42,9 @@ class PriceSpider(scrapy.Spider):
             return req
 
         forum = 'http://www.webhostingtalk.com/forumdisplay.php?f=104'
+        # p = 3
+        # forum = f'http://www.webhostingtalk.com/forumdisplay.php?' + \
+        #         'f=104&page={p}&sort=threadstarted'
         req = gen_req(forum)
         r = urllib.request.urlopen(req).read()
         with open("./forum.html", 'w') as f:

@@ -28,9 +28,16 @@ soup = None
 html_names = os.listdir(site_dir)
 n = 0
 empty = []
-old_empty = [26, 27, 32, 39]
+old_files = []
+if os.path.isfile('./old_files.txt'):
+    with open('./old_files.txt') as f:
+        old_files = f.read().split()
+print(old_files)
 pp = pprint.PrettyPrinter(indent=4)
 for html_name in html_names:
+    if html_name in old_files:
+        continue
+    file_path = pjoin(site_dir, html_name)
     n += 1
     if n != n:
         continue
@@ -45,6 +52,9 @@ for html_name in html_names:
         pp.pprint(table)
     print(file_path)
     print(f'File {n}', '='*80)
+    old_files.append(html_name)
 print(empty)
 print(len(empty))
-
+with open('./old_files.txt', 'w') as f:
+    for of in old_files:
+        print(of, file=f)
