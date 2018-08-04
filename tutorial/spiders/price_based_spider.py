@@ -9,17 +9,23 @@ from nltk.tokenize import RegexpTokenizer
 from nltk import RegexpTagger
 import urllib.request
 from . import util as u
+from . import debug
 from random import randint
 from time import sleep
+import html2text
 
 
 class PriceSpider(scrapy.Spider):
     name = "price"
     output_dir = '/media/hdd_ext4/vps_scrapy_htmls'
+    d = debug.DebugLogger()
 
     def __init__(self):
         self.state_table = self.clean_state_table()
         self.conf_table = {}
+
+    def log(self, *args, **kwargs):
+        self.d.log(*args, **kwargs)
 
     def start_requests(self):
         def gen_req(url):
@@ -80,7 +86,7 @@ class PriceSpider(scrapy.Spider):
 
     def webhostingtalk(self, soup: BeautifulSoup, link:str):
         content = soup.find('blockquote')
-        plain = content.text
+        plain = html2text.html2text(str(content))
         return self.extract_info(plain)
 
     def clean_state_table(self):
@@ -93,7 +99,7 @@ class PriceSpider(scrapy.Spider):
 
 
     def to_table(self, st: nltk.tree.Tree):
-        print('== Enter to table')
+        self.log(self.d.debug_tree, '== Enter to table')
         tables = []
         def try_add(found, k, v):
             if found:
@@ -101,46 +107,54 @@ class PriceSpider(scrapy.Spider):
                 self.state_table[k] = 1
 
         for sst in st:
+            self.log(self.d.debug_dollar, "proc: ", sst)
             if not isinstance(sst, nltk.tree.Tree):
-                print("skipped: ", sst)
+                self.log(self.d.debug_tree, "skipped!")
+                self.log(self.d.debug_dollar, "skipped!")
                 continue
             found = False
             if sst.label() == 'Conf':
-                print("tranv", sst)
+                self.log(self.d.debug_dollar, "trav", sst)
                 for prop in u.prop_dict:
                     found_t, k, v = u.get_property(prop, u.prop_dict[prop], sst)
                     try_add(found_t, k, v)
                     found |= found_t
             elif sst.label() == 'Price':
-                print("tranv", sst)
+                self.log(self.d.debug_dollar, 'trav', sst)
                 found_t, k, v = u.get_price(sst)
                 try_add(found_t, k, v)
                 found |= found_t
 
             if sum(self.state_table.values()) == 4:
-                print("## Table generated:", self.conf_table)
+                self.log(self.d.debug_dollar,
+                        "## Table generated:", self.conf_table)
                 tables.append(self.conf_table)
                 self.conf_table = self.clean_state_table()
                 self.state_table = self.clean_state_table()
             elif found:
-                print(self.state_table)
+                self.log(self.d.debug_dollar, self.state_table)
 
         return tables
 
     def extract_info(self, post: str):
+        # $15 -> $ 15
+        post = post.replace('_', ' ')
+        post = post.replace('$', ' $ ')
+        post = post.replace('\x80', ' \x80 ')
+        post = post.replace('£', ' £ ')
         rates = {'$': 1, '€': 1.17, '£': 1.31}
 
-        sent_tokenizer = RegexpTokenizer(r'\||,|\.\s|\s*\n\s*\n\s*', gaps=True)
+        sent_tokenizer = RegexpTokenizer(r'\||,|\.\s|\n', gaps=True)
         sentences = sent_tokenizer.tokenize(post.lower())
-        print(sentences)
+        self.log(self.d.debug_dollar, sentences)
 
         word_tokenizer = RegexpTokenizer(r'\s+', gaps=True)
         sentences = [word_tokenizer.tokenize(sent)
             for sent in sentences]
-        print(sentences)
+        self.log(self.d.debug_dollar, sentences)
 
         spec_tokenizer = RegexpTokenizer(
-                r'\$\d+\.\d+|\$\d+|EUR|\d+\.\d+|\d+|\w+', gaps=False)
+                r'\$|\x80|£|eur|\d+\.\d+|\d+|\w+', gaps=False)
         new_sents = []
         for sent in sentences:
             new_sent = []
@@ -148,6 +162,7 @@ class PriceSpider(scrapy.Spider):
                 new_sent += spec_tokenizer.tokenize(words)
             new_sents.append(new_sent)
         sentences = new_sents
+        self.log(self.d.debug_dollar, sentences)
 
         non_terms = ['Conf', 'Price']
 
@@ -155,7 +170,7 @@ class PriceSpider(scrapy.Spider):
         default_tagger = nltk.data.load(nltk.tag._POS_TAGGER)
         model = {
                 'eur': '$',
-                '€': '$',
+                '\x80': '$',
                 '£': '$',
                 'mb': 'Unit',
                 'gb': 'Unit',
@@ -174,15 +189,19 @@ class PriceSpider(scrapy.Spider):
                 'cpu': 'HW',
                 'processor': 'HW',
                 'bandwidth': 'HW',
+                'traffic': 'HW',
                 'bw': 'HW',
                 'transfer': 'HW',
                 'premium': 'HWM',
                 'pure': 'HWM',
                 'ddr4': 'HWM',
                 'dedicated': 'HWM',
+                'data': 'HWM',
+                'nvme': 'HWM',
                 '|': 'Del',
                 'month': 'Time',
                 '/month': 'Time',
+                'monthly': 'Time',
                 'mo': 'Time',
                 '/mo': 'Time',
                 '/m': 'Time',
@@ -190,16 +209,23 @@ class PriceSpider(scrapy.Spider):
                 '/mo)': 'Time',
                 '/m)': 'Time',
                 'year': 'Time',
+                'quarterly': 'Time',
                 'first': 'First',
                 '(first': 'First',
                 'price': 'Pri',
-                'unmetered': 'CD'
+                'unmetered': 'CD',
+                'unlimited': 'CD',
+                'gbps': 'Net',
+                'gbit': 'Net',
+                'mbps': 'Net',
                 }
         tagger = nltk.tag.UnigramTagger(model=model, backoff=default_tagger)
         for sent in sentences:
             if not len(sent):
                 continue
+            self.log(self.d.debug_tag, sent)
             tagged = tagger.tag(sent)
+            self.log(self.d.debug_dollar, tagged)
             grammar = r'''
             Num:    {<CD|LS>}
 
@@ -209,6 +235,7 @@ class PriceSpider(scrapy.Spider):
 
             Conf: {<Num><Unit><HW><HWM>}
             Conf: {<Num><Unit><HWM><HW>}
+            Conf: {<Num><Unit><Time><HW>}
             Conf: {<Num><Unit><HW>}
             Conf: {<HW><Num><Unit>}
             Conf: {<HW><:><Num><Unit>}
@@ -218,6 +245,10 @@ class PriceSpider(scrapy.Spider):
             Conf: {<Num><HW>}
             Conf: {<HW><Num>}
             Conf: {<HW><:><Num>}
+            Conf: {<HW><:><Num>}
+
+            Conf: {<Num><Net><Num>}
+            Conf: {<Num><Unit><Num><Net>}
 
 
             Price:  {<PRP\$><Pri><:>?<Money>}
@@ -229,7 +260,7 @@ class PriceSpider(scrapy.Spider):
             Price:  {<IN><RB>?<Money>}
             Price:  {<Money><NNP><NN>?}
 
-            TPrice: {}
+            Price:  {<Money>}
             '''
 
             cp = nltk.RegexpParser(grammar)

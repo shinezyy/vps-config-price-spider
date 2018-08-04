@@ -1,11 +1,13 @@
 import nltk
+from . import debug
 
 
 prop_dict = {
         'RAM': ['memory', 'ram'],
         'Disk': ['disk', 'ssd', 'storage', 'hdd', 'raid10'],
-        'Traffic': ['traffic', 'bandwidth', 'bw', 'transfer'],
+        'Traffic': ['traffic', 'bandwidth', 'bw', 'transfer', 'gbps', 'mbps'],
         }
+d = debug.DebugLogger()
 
 
 def get_property(prop:str, key_words: [str], st: nltk.tree.Tree):
@@ -22,7 +24,7 @@ def get_property(prop:str, key_words: [str], st: nltk.tree.Tree):
     found_count = False
     count = ''
     for leaf in st.leaves():
-        if leaf[1] == 'CD':
+        if leaf[1] == 'CD' or leaf[1] == 'LS':
             count = leaf[0]
             found_count = True
         elif leaf[1] == 'NNP' and found_count:
@@ -31,7 +33,8 @@ def get_property(prop:str, key_words: [str], st: nltk.tree.Tree):
     if not len(count):
         print('Warning: count not assigned')
 
-    print('##', prop, count)
+    d.log(d.debug_tree, '##', prop, count)
+
     return True, prop, count
 
 
@@ -65,5 +68,5 @@ def get_price(st: nltk.tree.Tree):
             count += '$'
             c += 1
 
-    print('## Price', count)
+    d.log(d.debug_tree, '## Price', count)
     return True, 'Price', count
