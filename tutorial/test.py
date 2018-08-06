@@ -30,7 +30,7 @@ html_names = os.listdir(site_dir)
 n = 0
 empty = []
 old_files = get_old()
-print(old_files)
+print('# old files:', len(old_files))
 pp = pprint.PrettyPrinter(indent=4)
 for html_name in html_names:
     if html_name in old_files:

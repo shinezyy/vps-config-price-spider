@@ -56,7 +56,7 @@ class PriceSpider(scrapy.Spider):
         for title in titles:
             print(prefix+title['href'])
             urls.append(prefix+title['href'])
-        urls = urls[4:]  # drop ads
+        urls = urls[3:]  # drop ads
         filtered_urls = []
         for url in urls:
             site, thread = url.split("/")[-2:]
@@ -196,7 +196,7 @@ class PriceSpider(scrapy.Spider):
         self.log(self.d.debug_dollar, sentences)
 
         spec_tokenizer = RegexpTokenizer(
-                r'\$|\x80|£|eur|\d+\.\d+|\d+|\w+', gaps=False)
+                r'\$|\x80|£|eur|usd|\d+\.\d+|\d+|\w+', gaps=False)
         new_sents = []
         for sent in sentences:
             new_sent = []
